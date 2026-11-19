@@ -1,0 +1,889 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="fake_skyyy_">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="什么是内存池？内存池（Memory Pool），又被称为固定大小区块规划（fixed-size-blocks allocation），允许程序员以类似 C语言 的 malloc 或是 C++ 的 new 操作数进行动态的存储器规划。对于其它动态存储器规划的实践来说，因为会变动存储器区块大小导致的碎片问题，导致在实时系统上受限于性能因此，根本无法使用。内存池提供了一个更有效率的解决方案：预先规划一定">
+<meta property="og:type" content="article">
+<meta property="og:title" content="在MCU实现一个简单的内存池">
+<meta property="og:url" content="https://fakeskyy.github.io/2026/11/19/mcu-memory-pool/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="什么是内存池？内存池（Memory Pool），又被称为固定大小区块规划（fixed-size-blocks allocation），允许程序员以类似 C语言 的 malloc 或是 C++ 的 new 操作数进行动态的存储器规划。对于其它动态存储器规划的实践来说，因为会变动存储器区块大小导致的碎片问题，导致在实时系统上受限于性能因此，根本无法使用。内存池提供了一个更有效率的解决方案：预先规划一定">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://fakeskyy.github.io/images/mcu-memory-pool/1.png">
+<meta property="article:published_time" content="2026-11-19T11:13:00.000Z">
+<meta property="article:modified_time" content="2026-11-19T11:14:46.354Z">
+<meta property="article:author" content="fake_skyyy_">
+<meta property="article:tag" content="STM32">
+<meta property="article:tag" content="内存池">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://fakeskyy.github.io/images/mcu-memory-pool/1.png">
+  
+  
+  
+  <title>在MCU实现一个简单的内存池 - Hexo</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"fakeskyy.github.io","root":"/","version":"1.9.9","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"expand_all":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"openkounter":{"server_url":"https://open-kounter.mintimate.cn","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Fluid</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content (desktop) -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile grid menu overlay -->
+<div id="mobile-grid-menu" class="d-lg-none">
+  <div class="mobile-grid-menu-inner">
+    <div class="container">
+      <div class="row">
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-home-fill"></i>
+                  <span>首页</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/archives/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-archive-fill"></i>
+                  <span>归档</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/categories/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-category-fill"></i>
+                  <span>分类</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/tags/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-tags-fill"></i>
+                  <span>标签</span>
+                </div>
+              </a>
+            </div>
+          
+        
+          
+          
+          
+          
+            <div class="col-4 mobile-grid-cell">
+              <a href="/about/" target="_self">
+                <div class="mobile-grid-item">
+                  <i class="iconfont icon-user-fill"></i>
+                  <span>关于</span>
+                </div>
+              </a>
+            </div>
+          
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-search-btn">
+            <a href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-search"></i>
+                <span>搜索</span>
+              </div>
+            </a>
+          </div>
+        
+        
+          <div class="col-4 mobile-grid-cell" id="mobile-color-toggle-btn"
+               data-label-light="开灯"
+               data-label-dark="关灯">
+            <a href="javascript:;" aria-label="Color Toggle">
+              <div class="mobile-grid-item">
+                <i class="iconfont icon-dark" id="mobile-color-toggle-icon"></i>
+                <span id="mobile-color-toggle-label">关灯</span>
+              </div>
+            </a>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="在MCU实现一个简单的内存池"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-11-19 19:13" pubdate>
+          2026年11月19日 晚上
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          8.5k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          72 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">在MCU实现一个简单的内存池</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="什么是内存池？"><a href="#什么是内存池？" class="headerlink" title="什么是内存池？"></a>什么是内存池？</h1><p><strong>内存池</strong>（Memory Pool），又被称为<strong>固定大小区块规划</strong>（fixed-size-blocks allocation），允许程序员以类似 <a target="_blank" rel="noopener" href="https://zh.wikipedia.org/wiki/C%E8%AA%9E%E8%A8%80" title="C语言">C语言</a> 的 <a target="_blank" rel="noopener" href="https://zh.wikipedia.org/wiki/Malloc" title="Malloc">malloc</a> 或是 <a target="_blank" rel="noopener" href="https://zh.wikipedia.org/wiki/C%2B%2B" title="C++">C++</a> 的 new 操作数进行动态的存储器规划。对于其它动态存储器规划的实践来说，因为会变动存储器区块大小导致的碎片问题，导致在<a target="_blank" rel="noopener" href="https://zh.wikipedia.org/w/index.php?title=%E5%AF%A6%E6%99%82%E7%B3%BB%E7%B5%B1&action=edit&redlink=1" title="实时系统（页面不存在）">实时系统</a>上受限于性能因此，根本无法使用。内存池提供了一个更有效率的解决方案：预先规划一定数量的存储器区块，使得整个程序可以在执行期规划 (allocate)、使用 (access)、归还 (free) 存储器区块。</p>
+<h1 id="为什么不使用c库的malloc？"><a href="#为什么不使用c库的malloc？" class="headerlink" title="为什么不使用c库的malloc？"></a>为什么不使用c库的malloc？</h1><h2 id="稳定性，可控性"><a href="#稳定性，可控性" class="headerlink" title="稳定性，可控性"></a>稳定性，可控性</h2><p>首先，我们知道定义在不同作用域或使用不同关键字修饰的变量，其所存储的位置是不同的<br>STM32 链接器对SRAM主要划为以下几个段：</p>
+<table>
+<thead>
+<tr>
+<th>区域</th>
+<th>主要用途</th>
+<th>示例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>.data</code></td>
+<td>有非零初始值的可修改全局变量、静态变量</td>
+<td><code>int a = 10;</code></td>
+</tr>
+<tr>
+<td><code>.bss</code></td>
+<td>未显式初始化或初始化为零的全局变量、静态变量</td>
+<td><code>int b;</code>、<code>static int c = 0;</code></td>
+</tr>
+<tr>
+<td>堆 Heap</td>
+<td>动态分配内存</td>
+<td><code>malloc()</code> 申请的空间</td>
+</tr>
+<tr>
+<td>栈 Stack</td>
+<td>函数调用现场、需要落到内存中的普通局部变量等</td>
+<td>函数内的 <code>int x;</code></td>
+</tr>
+<tr>
+<td>自定义区域（可选）</td>
+<td>不清零的数据、DMA 缓冲区等</td>
+<td><code>.noinit</code>、自定义 section</td>
+</tr>
+<tr>
+<td>我们使用malloc 就是在堆（heap）去申请内存空间。这样做本身没什么问题，但对于追求稳定的嵌入式系统，我们没办法很好的监测堆的使用情况，也无法去处理分配失败的情况。<del>虽然基本不会分配失败</del></td>
+<td></td>
+<td></td>
+</tr>
+</tbody></table>
+<p>一般情况，我们自己实现的内存池，就是直接定义一个超级大的全局数组，而全局变量是存放在<code>.bss</code>或<code>.data</code>段的（内存池一般初始化为0，所以在<code>.bss</code>段），这两个段的空间大小在编译期就可以确定。之后，我们只在自己定义的大数组内存池中申请内存，且申请函数和释放函数都由我们自己定义，所以更加稳定可控</p>
+<h1 id="实现代码"><a href="#实现代码" class="headerlink" title="实现代码"></a>实现代码</h1><h2 id="内存块头"><a href="#内存块头" class="headerlink" title="内存块头"></a>内存块头</h2><p>内存块头主要用于记录一个内存块的大小、下一个空闲内存块</p>
+<p>实现内存池，我们需要使用<strong>链表</strong>，而内存块头，就是链表节点</p>
+<p>内存块头和数据块在内存池中的存储方式大概是这样的：<br><img src="/images/mcu-memory-pool/1.png" srcset="/img/loading.gif" lazyload alt="内存块头和数据块的存储方式"></p>
+<p>所以内存块头中需要有两个成员，一个是链表节点中必须要有的指向下一个节点的指针<code>*next_free_block</code>，而另一个就是记录了该内存块大小的变量<code>block_size</code>。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs C"><span class="hljs-keyword">typedef</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">block_link</span> &#123;</span><br>    <span class="hljs-type">size_t</span> block_size;<br>    <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">block_link</span> *<span class="hljs-title">next_free_block</span>;</span><br>&#125; <span class="hljs-type">block_link_t</span>;<br></code></pre></td></tr></table></figure>
+
+<p>等等，实现内存池，我们为什么要使用链表？</p>
+<p>选择链表是为了方便管理<strong>大小不同、位置分散的空闲内存块</strong>。</p>
+<p>假设分配和释放一段时间后，内存变成：</p>
+<figure class="highlight css"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs css">低地址                                      高地址<br><span class="hljs-selector-attr">[空闲 A]</span><span class="hljs-selector-attr">[已用 B]</span><span class="hljs-selector-attr">[空闲 C]</span><span class="hljs-selector-attr">[已用 D]</span><span class="hljs-selector-attr">[空闲 E]</span><br></code></pre></td></tr></table></figure>
+
+<p>内存分配器要解决两个问题：</p>
+<ol>
+<li>下一次申请时，去哪里找足够大的空闲空间？</li>
+<li>释放一块空间时，怎样把它重新加入管理，并判断能否合并？</li>
+</ol>
+<p>链表让每个空闲内存块的块头保存“下一个空闲块在哪里”：</p>
+<figure class="highlight mathematica"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs mathematica"><span class="hljs-type">free_head</span> → <span class="hljs-variable">A</span> → <span class="hljs-built_in">C</span> → <span class="hljs-built_in">E</span> → <span class="hljs-variable">NULL</span><br></code></pre></td></tr></table></figure>
+
+<p>这样就可以从 <code>free_head</code>  &#x2F;&#x2F;todo 开始，只遍历空闲块，跳过已经分配的 B、D</p>
+<h2 id="内存池控制块"><a href="#内存池控制块" class="headerlink" title="内存池控制块"></a>内存池控制块</h2><p>内存池控制块用于管理整个内存池，记录内存池的信息</p>
+<p>我们实现的内存池控制块有四个成员，包含指向内存池起点的指针<code>*begin</code>、内存池进行<strong>字节对齐</strong>处理后剩余的有效总容量<code>capacity</code>、指向空闲内存块头的指针<code>free_head</code>、内存池当前还未分配出去的剩余空间<code>free_bytes</code>。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs C"><span class="hljs-keyword">typedef</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">MemPoolCtrlBlock</span> &#123;</span><br>    <span class="hljs-type">uint8_t</span> *begin;             <span class="hljs-comment">// 整个内存池起点</span><br>    <span class="hljs-type">size_t</span> capacity;            <span class="hljs-comment">// 对齐处理后的有效总容量</span><br>    <span class="hljs-type">block_link_t</span> *free_head;    <span class="hljs-comment">// 当前第一个空闲内存块块头</span><br>    <span class="hljs-type">size_t</span> free_bytes;          <span class="hljs-comment">// 当前尚未分配出去的总空闲空间</span><br>&#125; MemPoolCtrlBlock_t;<br></code></pre></td></tr></table></figure>
+
+<p>我们刚刚提到了<strong>字节对齐</strong>，为什么实现内存池需要<strong>字节对齐</strong>？</p>
+<p>先简单解释一下<strong>字节对齐</strong>：</p>
+<p>计算机中内存大小的基本单位是字节（byte），理论上来讲，可以从任意地址访问某种基本数据类型，但是实际上，计算机并非逐字节大小读写内存，而是以2，4，或8的倍数的字节块来读写内存，如此一来就会对基本数据类型的合法地址作出一些限制，即它的地址必须是2，4或8的倍数。那么就要求各种数据类型按照一定的规则在空间上排列，这就是对齐</p>
+<p>再回到刚刚的问题，为什么实现内存池需要<strong>字节对齐</strong>：</p>
+<p>因为 CPU 访问某些类型时，要求地址是特定数值的整数倍。例如，STM32上的<code>uint32_t</code>通常要求地址按 <strong>4 字节对齐</strong>。<br>不对齐可能导致访问变慢，某些指令或配置下甚至会触发硬件异常。<br>所以内存池必须保证：<strong>块头和返回给用户的数据地址，都满足相应类型的对齐要求。</strong></p>
+<p>我们定义的内存池一般都是使用<code>uint8_t</code>类型，但<code>uint8_t</code>是1字节对齐，假设 <code>uint8_t buffer[100]</code> 的起始地址是 <strong><code>0x20000003</code></strong>，我们要在这个<code>buffer</code>中存一个<code>float</code>或<code>double</code>，而<code>float</code>是4字节对齐，<code>double</code>是8字节对齐，为了满足不同数据类型的对齐需求，我们的内存池使用8字节对齐，因为<code>2*4=8</code>。当然，在STM32上也没有超过8字节的数据类型了。</p>
+<h2 id="内存池初始化函数"><a href="#内存池初始化函数" class="headerlink" title="内存池初始化函数"></a>内存池初始化函数</h2><p>代码部分就不再单独讲解了，每一行都有注释</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br></pre></td><td class="code"><pre><code class="hljs C"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * @param[out] instance 内存池控制块</span><br><span class="hljs-comment"> * @param[in,out] pool 可写连续存储区的起始地址</span><br><span class="hljs-comment"> * @param[in] bytes 存储区的可用字节数</span><br><span class="hljs-comment"> * @retval 0 初始化成功</span><br><span class="hljs-comment"> * @retval -1 instance 或 pool 为 NULL</span><br><span class="hljs-comment"> * @retval -2 存储区经对齐处理后不足以容纳最小内存块</span><br><span class="hljs-comment"> */</span><br><span class="hljs-type">int</span> <span class="hljs-title function_">MemPool_Init</span><span class="hljs-params">(MemPoolCtrlBlock_t *instance, <span class="hljs-type">void</span> *pool, <span class="hljs-type">size_t</span> bytes)</span> &#123;<br>    <span class="hljs-comment">// 先检查入参是否合法 好习惯</span><br>    <span class="hljs-keyword">if</span> (instance == <span class="hljs-literal">NULL</span>) &#123;<br>        <span class="hljs-keyword">return</span> <span class="hljs-number">-1</span>;<br>    &#125;<br><br>    <span class="hljs-comment">// 给控制块初始化</span><br>    *instance = (MemPoolCtrlBlock_t)&#123;<span class="hljs-number">0</span>&#125;;<br><br>    <span class="hljs-comment">// 先检查入参是否合法 好习惯</span><br>    <span class="hljs-keyword">if</span> (pool == <span class="hljs-literal">NULL</span>) &#123;<br>        <span class="hljs-keyword">return</span> <span class="hljs-number">-1</span>;<br>    &#125;<br><br>    <span class="hljs-comment">// 获取普通类型所需的通用对齐要求 单位是字节</span><br>    <span class="hljs-type">const</span> <span class="hljs-type">size_t</span> alignment = <span class="hljs-keyword">_Alignof</span>(<span class="hljs-type">max_align_t</span>);<br><br>    <span class="hljs-comment">// 把内存池地址转换为整数 计算起始地址需要向后移动多少字节才能满足对齐要求</span><br>    <span class="hljs-type">const</span> <span class="hljs-type">size_t</span> padding = (alignment - (<span class="hljs-type">uintptr_t</span>) pool % alignment) % alignment;<br><br>    <span class="hljs-comment">// 如果整个内存池小到不够支付前端对齐的损耗 就无法使用 应该没人去定义这么小的内存池吧（</span><br>    <span class="hljs-keyword">if</span> (bytes &lt;= padding) &#123;<br>        <span class="hljs-keyword">return</span> <span class="hljs-number">-2</span>;<br>    &#125;<br><br>    <span class="hljs-comment">// 把地址转为字节指针 并向后移动padding字节 这就是内存池实际可用的起点</span><br>    <span class="hljs-type">uint8_t</span> *begin = (<span class="hljs-type">uint8_t</span> *) pool + padding;<br><br>    <span class="hljs-comment">// 从原始长度中扣除前面跳过的字节</span><br>    <span class="hljs-type">size_t</span> capacity = bytes - padding;<br>    <span class="hljs-comment">// 舍去末尾不足一个对齐单位的部分 让有效容量成为对齐要求的整数倍</span><br>    capacity -= capacity % alignment;<br><br>    <span class="hljs-comment">// 把块头长度向上补齐为alignment的整数倍 这样跳过块头后 数据块起点也对齐了</span><br>    <span class="hljs-type">const</span> <span class="hljs-type">size_t</span> header_size = <span class="hljs-keyword">sizeof</span>(<span class="hljs-type">block_link_t</span>) + (alignment - <span class="hljs-keyword">sizeof</span>(<span class="hljs-type">block_link_t</span>) % alignment) % alignment;<br><br>    <span class="hljs-comment">// 有效区域至少要能放下一个块头+一个对齐单位的数据块 否则这个内存池连一个最小的可分配块都建立不了 应该没人去定义这么小的内存池吧（</span><br>    <span class="hljs-keyword">if</span> (capacity &lt; header_size + alignment) &#123;<br>        <span class="hljs-keyword">return</span> <span class="hljs-number">-2</span>;<br>    &#125;<br><br>    <span class="hljs-comment">// 用块头指针指向内存池起点</span><br>    <span class="hljs-type">block_link_t</span> *first = (<span class="hljs-type">block_link_t</span> *) begin;<br>    <span class="hljs-comment">// 记录第一个块的总大小 初始化时整个内存池有效区域都是这一块</span><br>    first-&gt;block_size = capacity;<br>    <span class="hljs-comment">// 当前只有一个空闲块 没有下一个结点</span><br>    first-&gt;next_free_block = <span class="hljs-literal">NULL</span>;<br><br>    <span class="hljs-comment">// 保存内存池有效区域起始地址</span><br>    instance-&gt;begin = begin;<br>    <span class="hljs-comment">// 保存有效区域总容量</span><br>    instance-&gt;capacity = capacity;<br>    <span class="hljs-comment">// 保存刚建立的第一个空闲块的地址 让空闲链表头指向刚建立的第一个空闲块</span><br>    instance-&gt;free_head = first;<br>    <span class="hljs-comment">// 保存空闲容量 刚初始化还没有任何分配 所以空闲容量等于有效区域总容量</span><br>    instance-&gt;free_bytes = capacity;<br><br>    <span class="hljs-comment">// 初始化完成</span><br>    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<h2 id="内存申请函数"><a href="#内存申请函数" class="headerlink" title="内存申请函数"></a>内存申请函数</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br></pre></td><td class="code"><pre><code class="hljs C"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * @param[in,out] instance 已初始化的内存池控制块</span><br><span class="hljs-comment"> * @param[in] size 请求的数据字节数，不含块头和填充，必须大于零</span><br><span class="hljs-comment"> * @return 成功返回数据区指针，失败返回 NULL</span><br><span class="hljs-comment"> */</span><br><span class="hljs-type">void</span> *<span class="hljs-title function_">MemPool_Alloc</span><span class="hljs-params">(MemPoolCtrlBlock_t *instance, <span class="hljs-type">size_t</span> size)</span> &#123;<br>    <span class="hljs-comment">// 先解释一下几个易混淆的名词：</span><br>    <span class="hljs-comment">// 1. 内存块头：数据结构为链表结点 包含了我们申请内存空间大小的信息</span><br>    <span class="hljs-comment">// 2. 数据块：我们申请下来可供我们自由存放数据的内存空间</span><br>    <span class="hljs-comment">// 3. 内存块：是内存块头+数据块组合成的整体 内存池中就是存储着一个个这样的整体</span><br>    <span class="hljs-comment">// 注意内存块头和内存块不是一个东西哦 内存块是包含了内存块头的 后续的注释可能会把内存块头简写为&quot;块头&quot;</span><br><br>    <span class="hljs-comment">// 先检查入参是否合法 好习惯</span><br>    <span class="hljs-keyword">if</span> (instance == <span class="hljs-literal">NULL</span> || instance-&gt;begin == <span class="hljs-literal">NULL</span> || size == <span class="hljs-number">0</span>) &#123;<br>        <span class="hljs-keyword">return</span> <span class="hljs-literal">NULL</span>;<br>    &#125;<br><br>    <span class="hljs-comment">// 获取普通类型所需的通用对齐要求 单位是字节</span><br>    <span class="hljs-type">const</span> <span class="hljs-type">size_t</span> alignment = <span class="hljs-keyword">_Alignof</span>(<span class="hljs-type">max_align_t</span>);<br>    <span class="hljs-comment">// 把块头长度向上补齐为alignment的整数倍 这样跳过块头后 数据块起点也对齐了</span><br>    <span class="hljs-type">const</span> <span class="hljs-type">size_t</span> header_size = <span class="hljs-keyword">sizeof</span>(<span class="hljs-type">block_link_t</span>) + (alignment - <span class="hljs-keyword">sizeof</span>(<span class="hljs-type">block_link_t</span>) % alignment) % alignment;<br><br>    <span class="hljs-comment">// 检查数据块加上块头是否会超出 size_t 的最大值 先减后比较 避免检查过程中自己发生加法溢出</span><br>    <span class="hljs-keyword">if</span> (size &gt; SIZE_MAX - header_size) &#123;<br>        <span class="hljs-keyword">return</span> <span class="hljs-literal">NULL</span>;<br>    &#125;<br><br>    <span class="hljs-comment">// 数据块+块头 也就是总共要在内存池中申请的空间</span><br>    <span class="hljs-type">size_t</span> needed = size + header_size;<br>    <span class="hljs-comment">// 要对我们申请的这整个内存块对齐 计算还需要补多少字节</span><br>    <span class="hljs-type">size_t</span> padding = (alignment - needed % alignment) % alignment;<br><br>    <span class="hljs-comment">// 检查再加上填充长度会不会溢出</span><br>    <span class="hljs-keyword">if</span> (needed &gt; SIZE_MAX - padding) &#123;<br>        <span class="hljs-keyword">return</span> <span class="hljs-literal">NULL</span>;<br>    &#125;<br><br>    <span class="hljs-comment">// 加入填充</span><br>    <span class="hljs-comment">// 到这里 我们申请的完整内存块完成字节对齐</span><br>    needed += padding;<br><br>    <span class="hljs-comment">// 比较我们申请的内存空间是否超过了现在内存池剩余的空闲空间</span><br>    <span class="hljs-keyword">if</span> (needed &gt; instance-&gt;free_bytes) &#123;<br>        <span class="hljs-keyword">return</span> <span class="hljs-literal">NULL</span>;<br>    &#125;<br><br>    <span class="hljs-comment">// prev用来保存前一个空闲块的地址 现在还没开始遍历 所以暂时没有前一个块</span><br>    <span class="hljs-type">block_link_t</span> *prev = <span class="hljs-literal">NULL</span>;<br>    <span class="hljs-comment">// 从第一个空闲块开始检查</span><br>    <span class="hljs-type">block_link_t</span> *current = instance-&gt;free_head;<br><br>    <span class="hljs-comment">// 开始遍历空闲块链表 找到有大于我们所需内存空间的空闲内存块</span><br>    <span class="hljs-keyword">while</span> (current != <span class="hljs-literal">NULL</span> &amp;&amp; current-&gt;block_size &lt; needed) &#123;<br>        prev = current;<br>        current = current-&gt;next_free_block;<br>    &#125;<br><br>    <span class="hljs-comment">// 遍历到链表末尾也没有合适的块 分配失败</span><br>    <span class="hljs-keyword">if</span> (current == <span class="hljs-literal">NULL</span>) &#123;<br>        <span class="hljs-keyword">return</span> <span class="hljs-literal">NULL</span>;<br>    &#125;<br><br>    <span class="hljs-comment">// 到这里 我们找到了合适的空闲内存块&#x27;current&#x27; 之后我们开始对&#x27;current&#x27;块裁剪</span><br><br>    <span class="hljs-comment">// 找到了合适的块 计算分配后还剩多少空间</span><br>    <span class="hljs-type">size_t</span> remaining = current-&gt;block_size - needed;<br>    <span class="hljs-comment">// 用来记录“谁替换current块在空闲链表中的位置” 后面裁剪时用</span><br>    <span class="hljs-type">block_link_t</span> *replacement;<br><br>    <span class="hljs-comment">// 剩余的部分必须至少放得下一个块头 以及一个对齐单位的数据块 这样才值得保留为新空闲块</span><br>    <span class="hljs-keyword">if</span> (remaining &gt;= header_size + alignment) &#123;<br>        <span class="hljs-comment">// 从当前块起点向后移动needed字节 刨去了我们要用的部分 把那个位置作为尾部空闲块的块头</span><br>        <span class="hljs-type">block_link_t</span> *tail = (<span class="hljs-type">block_link_t</span> *) ((<span class="hljs-type">uint8_t</span> *) current + needed);<br>        <span class="hljs-comment">// 记录尾部空闲块大小</span><br>        tail-&gt;block_size = remaining;<br>        <span class="hljs-comment">// 把尾部空闲块接上current块后面的空闲块</span><br>        tail-&gt;next_free_block = current-&gt;next_free_block;<br>        <span class="hljs-comment">// 使用尾部空闲块替换current块</span><br>        replacement = tail;<br>        <span class="hljs-comment">// 更新当前已分配块的大小</span><br>        current-&gt;block_size = needed;<br>    &#125; <span class="hljs-keyword">else</span> &#123;<br>        <span class="hljs-comment">// 如果跑到else 就说明current块没价值裁剪</span><br>        <span class="hljs-comment">// 使用current块的下一个块替换current块</span><br>        replacement = current-&gt;next_free_block;<br>    &#125;<br><br>    <span class="hljs-comment">// 到这里 我们完成了空闲内存块&#x27;current&#x27;的裁剪 下面开始更新内存池控制块和空闲链表</span><br><br>    <span class="hljs-comment">// 如果没有前一个块 就说明这次选中的就是空闲链表头</span><br>    <span class="hljs-keyword">if</span> (prev == <span class="hljs-literal">NULL</span>) &#123;<br>        <span class="hljs-comment">// 修改内存池控制块instance 让空闲链表从替代节点开始</span><br>        instance-&gt;free_head = replacement;<br>    &#125; <span class="hljs-keyword">else</span> &#123;<br>        <span class="hljs-comment">// 有前一个块 那就修改前一个块的连接 让它跳过即将分配的current块 连接替代结点</span><br>        prev-&gt;next_free_block = replacement;<br>    &#125;<br><br>    <span class="hljs-comment">// 减掉实际分配出去的current块大小 更新内存池控制块instance</span><br>    instance-&gt;free_bytes -= current-&gt;block_size;<br>    <span class="hljs-comment">// 清除已分配块的空闲链表链接 他已经不属于空闲链表</span><br>    current-&gt;next_free_block = <span class="hljs-literal">NULL</span>;<br><br>    <span class="hljs-comment">// 跳过块头 返回数据块的起始地址</span><br>    <span class="hljs-keyword">return</span> (<span class="hljs-type">uint8_t</span> *) current + header_size;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<h2 id="内存释放函数"><a href="#内存释放函数" class="headerlink" title="内存释放函数"></a>内存释放函数</h2><p>内存释放的同时会检查有没有相邻的空闲内存块，有的话就合并，尽量减少内存碎片，这就是使用链表的好处</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br></pre></td><td class="code"><pre><code class="hljs C"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * @param[in,out] instance 分配 ptr 的内存池控制块</span><br><span class="hljs-comment"> * @param[in] ptr 待释放的有效原始数据指针；传入 NULL 时不执行操作</span><br><span class="hljs-comment"> * @return 无返回值</span><br><span class="hljs-comment"> */</span><br><span class="hljs-type">void</span> <span class="hljs-title function_">MemPool_Free</span><span class="hljs-params">(MemPoolCtrlBlock_t *instance, <span class="hljs-type">void</span> *ptr)</span> &#123;<br>    <span class="hljs-comment">// 先检查入参是否合法 好习惯</span><br>    <span class="hljs-keyword">if</span> (instance == <span class="hljs-literal">NULL</span> || instance-&gt;begin == <span class="hljs-literal">NULL</span> || ptr == <span class="hljs-literal">NULL</span>) &#123;<br>        <span class="hljs-keyword">return</span>;<br>    &#125;<br><br>    <span class="hljs-comment">// 获取普通类型所需的通用对齐要求 单位是字节</span><br>    <span class="hljs-type">const</span> <span class="hljs-type">size_t</span> alignment = <span class="hljs-keyword">_Alignof</span>(<span class="hljs-type">max_align_t</span>);<br>    <span class="hljs-comment">// 把块头长度向上补齐为alignment的整数倍</span><br>    <span class="hljs-type">const</span> <span class="hljs-type">size_t</span> header_size = <span class="hljs-keyword">sizeof</span>(<span class="hljs-type">block_link_t</span>) + (alignment - <span class="hljs-keyword">sizeof</span>(<span class="hljs-type">block_link_t</span>) % alignment) % alignment;<br><br>    <span class="hljs-comment">// 将待释放数据块指针转换为字节指针 向前退header_size字节 结果是块头地址</span><br>    <span class="hljs-type">block_link_t</span> *block = (<span class="hljs-type">block_link_t</span> *) ((<span class="hljs-type">uint8_t</span> *) ptr - header_size);<br><br>    <span class="hljs-comment">// 初始化前一个空闲块指针</span><br>    <span class="hljs-type">block_link_t</span> *prev = <span class="hljs-literal">NULL</span>;<br>    <span class="hljs-comment">// 从第一个空闲块开始查找</span><br>    <span class="hljs-type">block_link_t</span> *current = instance-&gt;free_head;<br><br>    <span class="hljs-comment">// 遍历 条件是只要当前空闲块存在 且地址位于待释放块前</span><br>    <span class="hljs-keyword">while</span> (current != <span class="hljs-literal">NULL</span> &amp;&amp; (<span class="hljs-type">uint8_t</span> *) current &lt; (<span class="hljs-type">uint8_t</span> *) block) &#123;<br>        prev = current;<br>        current = current-&gt;next_free_block;<br>    &#125;<br><br>    <span class="hljs-comment">// 避免一块内存 未与前面的空闲块合并（或仅与后面的空闲块合并）的情况下 再次释放该块内存</span><br>    <span class="hljs-keyword">if</span> (current == block) &#123;<br>        <span class="hljs-keyword">return</span>;<br>    &#125;<br><br>    <span class="hljs-comment">// 避免一块内存 与前面的空闲块合并（或与前后两空闲块合并）的情况下 再次释放该块内存</span><br>    <span class="hljs-keyword">if</span> (prev != <span class="hljs-literal">NULL</span> &amp;&amp; (<span class="hljs-type">uintptr_t</span>) block - (<span class="hljs-type">uintptr_t</span>) prev &lt; prev-&gt;block_size) &#123;<br>        <span class="hljs-keyword">return</span>;<br>    &#125;<br><br>    <span class="hljs-comment">// 把本次释放的空间加回空闲空间</span><br>    instance-&gt;free_bytes += block-&gt;block_size;<br><br>    <span class="hljs-comment">// 让待释放块连接后面的空闲块</span><br>    block-&gt;next_free_block = current;<br><br>    <span class="hljs-comment">// 检查后面的空闲块是否存在 并判断待释放块的结束地址是否等于它的起始地址</span><br>    <span class="hljs-keyword">if</span> (current != <span class="hljs-literal">NULL</span> &amp;&amp; (<span class="hljs-type">uint8_t</span> *) block + block-&gt;block_size == (<span class="hljs-type">uint8_t</span> *) current) &#123;<br>        <span class="hljs-comment">// 将两块大小相加 合并这两块 让待释放块管理</span><br>        block-&gt;block_size += current-&gt;block_size;<br>        <span class="hljs-comment">// 跳过被合并的current节点 连接到他原来的后继</span><br>        block-&gt;next_free_block = current-&gt;next_free_block;<br>    &#125;<br><br>    <span class="hljs-comment">// 检查待释放块前面有没有空闲节点</span><br>    <span class="hljs-keyword">if</span> (prev == <span class="hljs-literal">NULL</span>) &#123;<br>        <span class="hljs-comment">// 没有 待释放块成为新链表头</span><br>        instance-&gt;free_head = block;<br>    &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> ((<span class="hljs-type">uint8_t</span> *) prev + prev-&gt;block_size == (<span class="hljs-type">uint8_t</span> *) block) &#123;<br>        <span class="hljs-comment">// 前面存在空闲块 并且它的结束地址等于待释放块的起始地址</span><br>        <span class="hljs-comment">// 将待释放块合并到前块中</span><br>        prev-&gt;block_size += block-&gt;block_size;<br>        <span class="hljs-comment">// 跳过被合并的block节点</span><br>        prev-&gt;next_free_block = block-&gt;next_free_block;<br>    &#125; <span class="hljs-keyword">else</span> &#123;<br>        <span class="hljs-comment">// 前面的空闲块存在 但不相邻 无法合并</span><br>        <span class="hljs-comment">// 将block作为独立空闲节点插到prev后面</span><br>        prev-&gt;next_free_block = block;<br>    &#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E5%B5%8C%E5%85%A5%E5%BC%8F/" class="category-chain-item">嵌入式</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/STM32/" class="print-no-link">#STM32</a>
+      
+        <a href="/tags/%E5%86%85%E5%AD%98%E6%B1%A0/" class="print-no-link">#内存池</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>在MCU实现一个简单的内存池</div>
+      <div>https://fakeskyy.github.io/2026/11/19/mcu-memory-pool/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>fake_skyyy_</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年11月19日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    function isExpandAllEnabled() {
+      return CONFIG.toc && CONFIG.toc.expand_all === true;
+    }
+    function expandAllToc() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .tocbot-is-collapsed').removeClass('tocbot-is-collapsed');
+    }
+    function updateTocToggle($li, $childList) {
+      var $toggle = $li.children('.toc-toggle');
+      if ($toggle.length === 0) { return; }
+      var collapsed = $childList.hasClass('tocbot-is-collapsed');
+      $toggle
+        .toggleClass('toc-toggle-collapsed', collapsed)
+        .toggleClass('toc-toggle-expanded', !collapsed);
+    }
+    function bindTocToggle() {
+      if (!isExpandAllEnabled()) { return; }
+      jQuery('#toc-body .toc-list-item').each(function() {
+        var $li = jQuery(this);
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) {
+          if ($li.children('.toc-toggle').length === 0) {
+            $li.prepend('<span class="toc-toggle toc-toggle-placeholder" aria-hidden="true">›</span>');
+          }
+          return;
+        }
+
+        if ($li.children('.toc-toggle').length === 0) {
+          $li.prepend('<span class="toc-toggle toc-toggle-expanded" aria-hidden="true">›</span>');
+        }
+        updateTocToggle($li, $childList);
+      });
+      jQuery('#toc-body').off('click.tocToggle').on('click.tocToggle', '.toc-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $li = jQuery(this).parent('.toc-list-item');
+        var $childList = $li.children('ol');
+        if ($childList.length === 0) { return; }
+        $childList.toggleClass('tocbot-is-collapsed');
+        updateTocToggle($li, $childList);
+      });
+      if (!window.__tocToggleObserver) {
+        window.__tocToggleObserver = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type !== 'attributes' || mutation.attributeName !== 'class') { return; }
+            var $list = jQuery(mutation.target);
+            var $li = $list.parent('.toc-list-item');
+            if ($li.length === 0) { return; }
+            updateTocToggle($li, $list);
+          });
+        });
+        jQuery('#toc-body ol').each(function() {
+          window.__tocToggleObserver.observe(this, { attributes: true });
+        });
+      }
+    }
+    var tocConfig = Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc);
+    if (isExpandAllEnabled()) {
+      tocConfig.collapseDepth = 6;
+    }
+    window.tocbot.init(tocConfig);
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+    expandAllToc();
+    bindTocToggle();
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+        expandAllToc();
+        bindTocToggle();
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
