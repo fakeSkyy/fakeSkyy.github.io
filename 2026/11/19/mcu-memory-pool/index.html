@@ -28,7 +28,7 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://fakeskyy.github.io/images/mcu-memory-pool/1.png">
 <meta property="article:published_time" content="2026-11-19T11:13:00.000Z">
-<meta property="article:modified_time" content="2026-11-19T12:01:16.555Z">
+<meta property="article:modified_time" content="2026-11-19T12:10:11.397Z">
 <meta property="article:author" content="fake_skyyy_">
 <meta property="article:tag" content="STM32">
 <meta property="article:tag" content="内存池">
@@ -385,7 +385,7 @@
               <div class="markdown-body">
                 
                 <h1 id="什么是内存池？"><a href="#什么是内存池？" class="headerlink" title="什么是内存池？"></a>什么是内存池？</h1><p><strong>内存池</strong>（Memory Pool），又被称为<strong>固定大小区块规划</strong>（fixed-size-blocks allocation），允许程序员以类似 <a target="_blank" rel="noopener" href="https://zh.wikipedia.org/wiki/C%E8%AA%9E%E8%A8%80" title="C语言">C语言</a> 的 <a target="_blank" rel="noopener" href="https://zh.wikipedia.org/wiki/Malloc" title="Malloc">malloc</a> 或是 <a target="_blank" rel="noopener" href="https://zh.wikipedia.org/wiki/C%2B%2B" title="C++">C++</a> 的 new 操作数进行动态的存储器规划。对于其它动态存储器规划的实践来说，因为会变动存储器区块大小导致的碎片问题，导致在<a target="_blank" rel="noopener" href="https://zh.wikipedia.org/w/index.php?title=%E5%AF%A6%E6%99%82%E7%B3%BB%E7%B5%B1&action=edit&redlink=1" title="实时系统（页面不存在）">实时系统</a>上受限于性能因此，根本无法使用。内存池提供了一个更有效率的解决方案：预先规划一定数量的存储器区块，使得整个程序可以在执行期规划 (allocate)、使用 (access)、归还 (free) 存储器区块。</p>
-<h1 id="为什么不使用c库的malloc？"><a href="#为什么不使用c库的malloc？" class="headerlink" title="为什么不使用c库的malloc？"></a>为什么不使用c库的malloc？</h1><h2 id="稳定性，可控性"><a href="#稳定性，可控性" class="headerlink" title="稳定性，可控性"></a>稳定性，可控性</h2><p>首先，我们知道定义在不同作用域或使用不同关键字修饰的变量，其所存储的位置是不同的<br>STM32 链接器对SRAM主要划为以下几个段：</p>
+<h1 id="为什么不使用c库的malloc？"><a href="#为什么不使用c库的malloc？" class="headerlink" title="为什么不使用c库的malloc？"></a>为什么不使用c库的malloc？</h1><h2 id="稳定性，可控性"><a href="#稳定性，可控性" class="headerlink" title="稳定性，可控性"></a>稳定性，可控性</h2><p>首先，我们知道定义在不同作用域或使用不同关键字修饰的变量，其所存储的位置是不同的<br>STM32链接器对SRAM主要划为以下几个段：</p>
 <table>
 <thead>
 <tr>
